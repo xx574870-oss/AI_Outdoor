@@ -1,9 +1,7 @@
 
 import streamlit as st
 import pandas as pd
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
-
+import re
 
 # =========================
 # 1. 載入資料
@@ -14,47 +12,44 @@ df = pd.read_csv(
     encoding="utf-8-sig"
 )
 
-
 # =========================
-# 2. 載入 AI 模型
-# =========================
-
-MODEL_NAME = "paraphrase-multilingual-MiniLM-L3-v2"
-
-@st.cache_resource
-def load_model():
-    return SentenceTransformer(MODEL_NAME)
-
-model = load_model()
-
-# =========================
-# 3. 建立商品文字
+# 2. 文字匹配評分
 # =========================
 
-product_texts = (
-    df["product_name"].fillna("").astype(str)
-    + " "
-    + df["category"].fillna("").astype(str)
-    + " "
-    + df["material"].fillna("").astype(str)
-    + " "
-    + df["season"].fillna("").astype(str)
-    + " "
-    + df["use_case"].fillna("").astype(str)
-    + " "
-    + df["features"].fillna("").astype(str)
-    + " "
-    + df["description"].fillna("").astype(str)
-)
+def calculate_text_score(user_query, product):
 
-product_embeddings = model.encode(
-    product_texts.tolist(),
-    normalize_embeddings=True
-)
+    query = user_query.lower()
+
+    text = " ".join([
+        str(product.get("product_name", "")),
+        str(product.get("category", "")),
+        str(product.get("material", "")),
+        str(product.get("season", "")),
+        str(product.get("use_case", "")),
+        str(product.get("features", "")),
+        str(product.get("description", ""))
+    ]).lower()
+
+    keywords = re.findall(
+        r"[ぁ-んァ-ン一-龥a-zA-Z0-9]+",
+        query
+    )
+
+    score = 0.0
+
+    for keyword in keywords:
+
+        if len(keyword) <= 1:
+            continue
+
+        if keyword in text:
+            score += 0.10
+
+    return min(score, 1.0)
 
 
 # =========================
-# 4. 商品屬性評分
+# 3. 商品屬性評分
 # =========================
 
 def calculate_attribute_score(user_query, product):
@@ -165,11 +160,11 @@ def calculate_attribute_score(user_query, product):
         if "旅行" in str(product["use_case"]):
             score += 0.10
 
-    return score
+    return max(0.0, score)
 
 
 # =========================
-# 5. 推薦処理
+# 4. 推薦処理
 # =========================
 
 def recommend_products(
@@ -177,19 +172,16 @@ def recommend_products(
     top_n=3
 ):
 
-    query_embedding = model.encode(
-        [user_query],
-        normalize_embeddings=True
-    )
-
-    similarities = cosine_similarity(
-        query_embedding,
-        product_embeddings
-    )[0]
-
     result = df.copy()
 
-    result["similarity"] = similarities
+    result["similarity"] = result.apply(
+        lambda product:
+        calculate_text_score(
+            user_query,
+            product
+        ),
+        axis=1
+    )
 
     result["attribute_score"] = result.apply(
         lambda product:
@@ -214,7 +206,7 @@ def recommend_products(
 
 
 # =========================
-# 6. Streamlit UI
+# 5. Streamlit UI
 # =========================
 
 st.set_page_config(
@@ -223,11 +215,13 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🏕️ AIを活用したアウトドア用品推薦システム")
+st.title(
+    "🏕️ AIを活用したアウトドア用品推薦システム"
+)
 
 st.write(
     "あなたの希望を入力すると、"
-    "AIが条件に合ったアウトドア用品を推薦します。"
+    "条件に合ったアウトドア用品を推薦します。"
 )
 
 st.info(
@@ -241,7 +235,7 @@ user_query = st.text_input(
 
 
 # =========================
-# 7. 推薦結果
+# 6. 推薦結果
 # =========================
 
 if st.button(
@@ -320,7 +314,7 @@ if st.button(
             )
 
             st.write(
-                f"AI類似度：{product['similarity']:.3f}"
+                f"類似度スコア：{product['similarity']:.3f}"
             )
 
             st.write(
