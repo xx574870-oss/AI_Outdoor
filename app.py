@@ -19,10 +19,13 @@ df = pd.read_csv(
 # 2. 載入 AI 模型
 # =========================
 
-MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
+MODEL_NAME = "paraphrase-multilingual-MiniLM-L3-v2"
 
-model = SentenceTransformer(MODEL_NAME)
+@st.cache_resource
+def load_model():
+    return SentenceTransformer(MODEL_NAME)
 
+model = load_model()
 
 # =========================
 # 3. 建立商品文字
