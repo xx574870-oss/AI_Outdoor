@@ -76,6 +76,87 @@ def calculate_category_score(
 
     query = user_query.lower()
 
+    product_name = str(
+        product["product_name"]
+    ).lower()
+
+    category = str(
+        product["category"]
+    ).lower()
+
+    score = 0.0
+
+    # =====================================================
+    # 「服」：優先推薦上衣，不優先推薦褲子
+    # =====================================================
+
+    if "服" in query:
+
+        # ジャケット
+        if "ジャケット" in product_name:
+            score += 0.20
+
+        # シャツ
+        elif "シャツ" in category:
+            score += 0.18
+
+        # パーカー
+        elif "パーカー" in category:
+            score += 0.18
+
+        # フリース
+        elif "フリース" in category:
+            score += 0.17
+
+        # ダウン
+        elif "ダウン" in category:
+            score += 0.17
+
+        # パンツ
+        elif "パンツ" in product_name:
+            score += 0.05
+
+        # 其他
+        else:
+            score += 0.08
+
+    # =====================================================
+    # 「ジャケット」
+    # =====================================================
+
+    if "ジャケット" in query:
+
+        if "ジャケット" in product_name:
+            score += 0.20
+
+    # =====================================================
+    # 「パンツ」
+    # =====================================================
+
+    if "パンツ" in query:
+
+        if "パンツ" in product_name:
+            score += 0.20
+
+    # =====================================================
+    # 「レインウェア」
+    # =====================================================
+
+    if (
+        "レインウェア" in query
+        or "雨具" in query
+    ):
+
+        if "レインウェア" in category:
+            score += 0.10
+
+    return min(
+        score,
+        0.40
+    )
+
+    query = user_query.lower()
+
     category = str(
         product["category"]
     ).lower()
