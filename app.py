@@ -110,7 +110,6 @@ def calculate_match_score(user_query, product):
 
         weight = str(product["weight"])
 
-       ```python
 import streamlit as st
 import pandas as pd
 import re
