@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import re
 
+
 # =========================
 # 1. 載入資料
 # =========================
@@ -10,6 +11,7 @@ df = pd.read_csv(
     "products.csv",
     encoding="utf-8-sig"
 )
+
 
 # =========================
 # 2. 文字匹配評分
@@ -86,7 +88,7 @@ def calculate_attribute_score(user_query, product):
     score = 0.0
 
     # =========================
-    # 季節
+    # 季節：冬
     # =========================
 
     if any(
@@ -108,6 +110,10 @@ def calculate_attribute_score(user_query, product):
         elif product["warmth"] == "中":
             score += 0.08
 
+    # =========================
+    # 季節：夏
+    # =========================
+
     if any(
         keyword in query
         for keyword in [
@@ -126,10 +132,18 @@ def calculate_attribute_score(user_query, product):
         elif product["breathability"] == "高":
             score += 0.10
 
+    # =========================
+    # 季節：春
+    # =========================
+
     if "春" in query:
 
         if "春" in str(product["season"]):
             score += 0.20
+
+    # =========================
+    # 季節：秋
+    # =========================
 
     if "秋" in query:
 
@@ -444,7 +458,11 @@ if st.button(
 
             col1, col2 = st.columns(2)
 
-                        with col1:
+            # =========================
+            # 左側
+            # =========================
+
+            with col1:
 
                 st.write(
                     f"**カテゴリー：** {product['category']}"
@@ -462,6 +480,10 @@ if st.button(
                     f"**重量：** {product['weight']}"
                 )
 
+            # =========================
+            # 右側
+            # =========================
+
             with col2:
 
                 st.write(
@@ -479,27 +501,18 @@ if st.button(
                 st.write(
                     f"**収納性：** {product['packability']}"
                 )
-            with col2:
 
-                st.write(
-                    f"**防水性：** {product['waterproof']}"
-                )
-
-                st.write(
-                    f"**保温性：** {product['warmth']}"
-                )
-
-                st.write(
-                    f"**通気性：** {product['breathability']}"
-                )
-
-                st.write(
-                    f"**収納性：** {product['packability']}"
-                )
+            # =========================
+            # 商品説明
+            # =========================
 
             st.write(
                 f"**商品説明：** {product['description']}"
             )
+
+            # =========================
+            # 評分
+            # =========================
 
             st.write(
                 f"条件一致度：{product['similarity']:.3f}"
@@ -512,6 +525,10 @@ if st.button(
             st.write(
                 f"最終スコア：{product['final_score']:.3f}"
             )
+
+            # =========================
+            # 官方網站
+            # =========================
 
             official_url = str(
                 product.get(
