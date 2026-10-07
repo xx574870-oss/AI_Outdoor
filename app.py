@@ -4,25 +4,48 @@ import re
 
 
 # =========================================================
-# 1. 載入商品資料
+# 1. 基本設定
 # =========================================================
 
-df = pd.read_csv(
-    "products.csv",
-    encoding="utf-8-sig"
+st.set_page_config(
+    page_title="AI Outdoor Recommendation",
+    page_icon="🏕️",
+    layout="wide"
 )
 
 
 # =========================================================
-# 2. 整理價格
+# 2. 載入商品資料
+# =========================================================
+
+@st.cache_data
+def load_products():
+
+    data = pd.read_csv(
+        "products.csv",
+        encoding="utf-8-sig"
+    )
+
+    return data
+
+
+df = load_products()
+
+
+# =========================================================
+# 3. 價格整理
 # =========================================================
 
 def clean_price(value):
 
     try:
+
         text = str(value).strip()
 
-        if text == "" or text.lower() == "nan":
+        if (
+            text == ""
+            or text.lower() == "nan"
+        ):
             return 0
 
         text = (
@@ -32,22 +55,29 @@ def clean_price(value):
             .replace("円", "")
         )
 
-        match = re.search(r"\d+", text)
+        match = re.search(
+            r"\d+",
+            text
+        )
 
         if match:
-            return float(match.group())
+            return float(
+                match.group()
+            )
 
         return 0
 
-    except:
+    except Exception:
         return 0
 
 
-df["price"] = df["price"].apply(clean_price)
+df["price"] = df["price"].apply(
+    clean_price
+)
 
 
 # =========================================================
-# 3. 重量解析
+# 4. 重量解析
 # =========================================================
 
 def get_weight(weight):
@@ -60,13 +90,15 @@ def get_weight(weight):
     )
 
     if match:
-        return int(match.group(1))
+        return int(
+            match.group(1)
+        )
 
     return None
 
 
 # =========================================================
-# 4. 商品類型匹配
+# 5. 商品類型判斷
 # =========================================================
 
 def calculate_category_score(
@@ -74,7 +106,9 @@ def calculate_category_score(
     product
 ):
 
-    query = user_query.lower()
+    query = str(
+        user_query
+    ).lower()
 
     product_name = str(
         product["product_name"]
@@ -86,147 +120,63 @@ def calculate_category_score(
 
     score = 0.0
 
-    # =====================================================
-    # 「服」：優先推薦上衣，不優先推薦褲子
-    # =====================================================
-
-    if "服" in query:
-
-        # ジャケット
-        if "ジャケット" in product_name:
-            score += 0.20
-
-        # シャツ
-        elif "シャツ" in category:
-            score += 0.18
-
-        # パーカー
-        elif "パーカー" in category:
-            score += 0.18
-
-        # フリース
-        elif "フリース" in category:
-            score += 0.17
-
-        # ダウン
-        elif "ダウン" in category:
-            score += 0.17
-
-        # パンツ
-        elif "パンツ" in product_name:
-            score += 0.05
-
-        # 其他
-        else:
-            score += 0.08
-
-    # =====================================================
-    # 「ジャケット」
-    # =====================================================
-
-    if "ジャケット" in query:
-
-        if "ジャケット" in product_name:
-            score += 0.20
-
-    # =====================================================
-    # 「パンツ」
-    # =====================================================
-
-    if "パンツ" in query:
-
-        if "パンツ" in product_name:
-            score += 0.20
-
-    # =====================================================
-    # 「レインウェア」
-    # =====================================================
+    # -----------------------------------------------------
+    # レインジャケット
+    # -----------------------------------------------------
 
     if (
-        "レインウェア" in query
-        or "雨具" in query
+        "レインジャケット" in query
+        or
+        "レイン ジャケット" in query
     ):
 
-        if "レインウェア" in category:
-            score += 0.10
-
-    return min(
-        score,
-        0.40
-    )
-
-    query = user_query.lower()
-
-    category = str(
-        product["category"]
-    ).lower()
-
-    product_name = str(
-        product["product_name"]
-    ).lower()
-
-    features = str(
-        product["features"]
-    ).lower()
-
-    score = 0.0
-
-    # -----------------------------------------------------
-    # 「服」的判斷
-    # -----------------------------------------------------
-
-    if "服" in query:
-
-        # 上衣類
-        if any(
-            word in category
-            for word in [
-                "レインウェア",
-                "ダウン",
-                "シャツ",
-                "フリース",
-                "パーカー"
-            ]
+        if (
+            "ジャケット" in product_name
+            and
+            "レインウェア" in category
         ):
-            score += 0.15
+            score += 0.50
 
-        # パンツ不是主要的「服」
-        if "パンツ" in product_name:
-            score -= 0.05
+        elif "ジャケット" in product_name:
+            score += 0.20
 
     # -----------------------------------------------------
     # ジャケット
     # -----------------------------------------------------
 
-    if "ジャケット" in query:
+    elif "ジャケット" in query:
 
         if "ジャケット" in product_name:
-            score += 0.15
+            score += 0.50
+
+    # -----------------------------------------------------
+    # レインパンツ
+    # -----------------------------------------------------
+
+    if (
+        "レインパンツ" in query
+        or
+        "レイン パンツ" in query
+    ):
+
+        if (
+            "パンツ" in product_name
+            and
+            "レインウェア" in category
+        ):
+            score += 0.50
+
+        elif "パンツ" in product_name:
+            score += 0.20
 
     # -----------------------------------------------------
     # パンツ
     # -----------------------------------------------------
 
-    if "パンツ" in query:
+    elif "パンツ" in query:
 
         if "パンツ" in product_name:
-            score += 0.20
-
-    # -----------------------------------------------------
-    # レインウェア
-    # -----------------------------------------------------
-
-    if any(
-        word in query
-        for word in [
-            "レインウェア",
-            "雨具",
-            "雨の日"
-        ]
-    ):
-
-        if "レインウェア" in category:
-            score += 0.10
+            score += 0.50
 
     # -----------------------------------------------------
     # パーカー
@@ -234,17 +184,210 @@ def calculate_category_score(
 
     if "パーカー" in query:
 
-        if "パーカー" in category:
+        if "パーカー" in product_name:
+            score += 0.50
+
+        elif "パーカー" in category:
+            score += 0.40
+
+    # -----------------------------------------------------
+    # ダウン
+    # -----------------------------------------------------
+
+    if "ダウン" in query:
+
+        if "ダウン" in product_name:
+            score += 0.50
+
+        elif "ダウン" in category:
+            score += 0.40
+
+    # -----------------------------------------------------
+    # シャツ
+    # -----------------------------------------------------
+
+    if "シャツ" in query:
+
+        if "シャツ" in product_name:
+            score += 0.50
+
+        elif "シャツ" in category:
+            score += 0.40
+
+    # -----------------------------------------------------
+    # レインウェア
+    # -----------------------------------------------------
+
+    if (
+        "レインウェア" in query
+        or
+        "雨具" in query
+    ):
+
+        if "レインウェア" in category:
+            score += 0.25
+
+    # -----------------------------------------------------
+    # 「服」
+    # -----------------------------------------------------
+
+    if "服" in query:
+
+        if "ジャケット" in product_name:
+            score += 0.25
+
+        elif "パーカー" in category:
+            score += 0.22
+
+        elif "ダウン" in category:
+            score += 0.22
+
+        elif "フリース" in category:
             score += 0.20
 
-    return max(
-        0.0,
-        min(score, 0.20)
+        elif "シャツ" in category:
+            score += 0.20
+
+        elif "パンツ" in product_name:
+            score += 0.05
+
+    return min(
+        score,
+        1.0
     )
 
 
 # =========================================================
-# 5. 條件一致度
+# 6. 防水スコア
+# =========================================================
+
+def get_waterproof_score(
+    product
+):
+
+    waterproof = str(
+        product["waterproof"]
+    )
+
+    if waterproof == "非常に高い":
+        return 1.00
+
+    if waterproof == "高":
+        return 0.80
+
+    if waterproof == "中":
+        return 0.40
+
+    if waterproof == "低":
+        return 0.10
+
+    return 0.00
+
+
+# =========================================================
+# 7. 重量スコア
+# =========================================================
+
+def get_weight_score(
+    product
+):
+
+    grams = get_weight(
+        product["weight"]
+    )
+
+    if grams is None:
+        return 0.00
+
+    if grams <= 180:
+        return 1.00
+
+    if grams <= 250:
+        return 0.90
+
+    if grams <= 300:
+        return 0.75
+
+    if grams <= 400:
+        return 0.50
+
+    if grams <= 500:
+        return 0.30
+
+    return 0.10
+
+
+# =========================================================
+# 8. 保暖スコア
+# =========================================================
+
+def get_warmth_score(
+    product
+):
+
+    warmth = str(
+        product["warmth"]
+    )
+
+    if warmth == "高":
+        return 1.00
+
+    if warmth == "中":
+        return 0.50
+
+    return 0.00
+
+
+# =========================================================
+# 9. 通氣性スコア
+# =========================================================
+
+def get_breathability_score(
+    product
+):
+
+    breathability = str(
+        product["breathability"]
+    )
+
+    if breathability == "非常に高い":
+        return 1.00
+
+    if breathability == "高":
+        return 0.80
+
+    if breathability == "中":
+        return 0.50
+
+    return 0.20
+
+
+# =========================================================
+# 10. 収納性スコア
+# =========================================================
+
+def get_packability_score(
+    product
+):
+
+    packability = str(
+        product["packability"]
+    )
+
+    if packability == "非常に高い":
+        return 1.00
+
+    if packability == "高い":
+        return 0.80
+
+    if packability == "中":
+        return 0.50
+
+    return 0.00
+
+
+# =========================================================
+# 11. 條件一致度
 # =========================================================
 
 def calculate_match_score(
@@ -252,7 +395,9 @@ def calculate_match_score(
     product
 ):
 
-    query = str(user_query).lower()
+    query = str(
+        user_query
+    ).lower()
 
     score = 0.0
     max_score = 0.0
@@ -273,27 +418,13 @@ def calculate_match_score(
 
         max_score += 30
 
-        waterproof = str(
-            product["waterproof"]
+        score += (
+            get_waterproof_score(product)
+            * 30
         )
 
-        if waterproof == "非常に高い":
-            score += 30
-
-        elif waterproof == "高":
-            score += 24
-
-        elif waterproof == "中":
-            score += 12
-
-        elif waterproof == "低":
-            score += 3
-
-        elif waterproof == "なし":
-            score += 0
-
     # -----------------------------------------------------
-    # 輕量
+    # 輕量 / 薄い
     # -----------------------------------------------------
 
     if any(
@@ -301,6 +432,7 @@ def calculate_match_score(
         for word in [
             "軽い",
             "軽量",
+            "薄い",
             "持ち運び"
         ]
     ):
@@ -311,36 +443,15 @@ def calculate_match_score(
             product["features"]
         )
 
-        # 有「軽量」
+        # 有輕量特徵
         if "軽量" in features:
-            score += 12
+            score += 10
 
         # 實際重量
-        grams = get_weight(
-            product["weight"]
+        score += (
+            get_weight_score(product)
+            * 15
         )
-
-        if grams is not None:
-
-            if grams <= 180:
-                score += 13
-
-            elif grams <= 250:
-                score += 11
-
-            elif grams <= 300:
-                score += 9
-
-            elif grams <= 400:
-                score += 6
-
-            elif grams <= 500:
-                score += 3
-
-        else:
-
-            # 沒有重量資料，不給完整分數
-            score += 0
 
     # -----------------------------------------------------
     # 旅行
@@ -359,7 +470,6 @@ def calculate_match_score(
         if "旅行" in str(
             product["use_case"]
         ):
-
             score += 15
 
     # -----------------------------------------------------
@@ -373,11 +483,10 @@ def calculate_match_score(
         if "登山" in str(
             product["use_case"]
         ):
-
             score += 15
 
     # -----------------------------------------------------
-    # 暖かい
+    # 暖かい / 防寒
     # -----------------------------------------------------
 
     if any(
@@ -393,15 +502,10 @@ def calculate_match_score(
 
         max_score += 20
 
-        warmth = str(
-            product["warmth"]
+        score += (
+            get_warmth_score(product)
+            * 20
         )
-
-        if warmth == "高":
-            score += 20
-
-        elif warmth == "中":
-            score += 10
 
     # -----------------------------------------------------
     # 涼しい / 通氣性
@@ -419,18 +523,10 @@ def calculate_match_score(
 
         max_score += 20
 
-        breathability = str(
-            product["breathability"]
+        score += (
+            get_breathability_score(product)
+            * 20
         )
-
-        if breathability == "非常に高い":
-            score += 20
-
-        elif breathability == "高":
-            score += 15
-
-        elif breathability == "中":
-            score += 8
 
     # -----------------------------------------------------
     # ストレッチ
@@ -455,7 +551,6 @@ def calculate_match_score(
             or
             "動きやすい" in features
         ):
-
             score += 10
 
     # -----------------------------------------------------
@@ -472,21 +567,13 @@ def calculate_match_score(
 
         max_score += 10
 
-        packability = str(
-            product["packability"]
+        score += (
+            get_packability_score(product)
+            * 10
         )
 
-        if packability == "非常に高い":
-            score += 10
-
-        elif packability == "高い":
-            score += 8
-
-        elif packability == "中":
-            score += 4
-
     # -----------------------------------------------------
-    # 計算
+    # 沒有條件
     # -----------------------------------------------------
 
     if max_score == 0:
@@ -499,7 +586,7 @@ def calculate_match_score(
 
 
 # =========================================================
-# 6. 商品屬性分數
+# 12. 屬性分數
 # =========================================================
 
 def calculate_attribute_score(
@@ -507,9 +594,12 @@ def calculate_attribute_score(
     product
 ):
 
-    query = user_query.lower()
+    query = str(
+        user_query
+    ).lower()
 
     score = 0.0
+    count = 0
 
     # -----------------------------------------------------
     # 防水
@@ -525,21 +615,11 @@ def calculate_attribute_score(
         ]
     ):
 
-        waterproof = str(
-            product["waterproof"]
+        score += (
+            get_waterproof_score(product)
         )
 
-        if waterproof == "非常に高い":
-            score += 0.30
-
-        elif waterproof == "高":
-            score += 0.24
-
-        elif waterproof == "中":
-            score += 0.12
-
-        elif waterproof == "低":
-            score += 0.03
+        count += 1
 
     # -----------------------------------------------------
     # 輕量
@@ -550,37 +630,16 @@ def calculate_attribute_score(
         for word in [
             "軽い",
             "軽量",
+            "薄い",
             "持ち運び"
         ]
     ):
 
-        features = str(
-            product["features"]
+        score += (
+            get_weight_score(product)
         )
 
-        if "軽量" in features:
-            score += 0.10
-
-        grams = get_weight(
-            product["weight"]
-        )
-
-        if grams is not None:
-
-            if grams <= 180:
-                score += 0.15
-
-            elif grams <= 250:
-                score += 0.13
-
-            elif grams <= 300:
-                score += 0.10
-
-            elif grams <= 400:
-                score += 0.06
-
-            elif grams <= 500:
-                score += 0.03
+        count += 1
 
     # -----------------------------------------------------
     # 暖かさ
@@ -597,11 +656,11 @@ def calculate_attribute_score(
         ]
     ):
 
-        if product["warmth"] == "高":
-            score += 0.25
+        score += (
+            get_warmth_score(product)
+        )
 
-        elif product["warmth"] == "中":
-            score += 0.12
+        count += 1
 
     # -----------------------------------------------------
     # 通氣性
@@ -617,14 +676,11 @@ def calculate_attribute_score(
         ]
     ):
 
-        if product["breathability"] == "非常に高い":
-            score += 0.25
+        score += (
+            get_breathability_score(product)
+        )
 
-        elif product["breathability"] == "高":
-            score += 0.20
-
-        elif product["breathability"] == "中":
-            score += 0.10
+        count += 1
 
     # -----------------------------------------------------
     # 旅行
@@ -641,8 +697,11 @@ def calculate_attribute_score(
         if "旅行" in str(
             product["use_case"]
         ):
+            score += 1.0
+        else:
+            score += 0.0
 
-            score += 0.10
+        count += 1
 
     # -----------------------------------------------------
     # 登山
@@ -653,66 +712,25 @@ def calculate_attribute_score(
         if "登山" in str(
             product["use_case"]
         ):
+            score += 1.0
 
-            score += 0.10
-
-    # -----------------------------------------------------
-    # ストレッチ
-    # -----------------------------------------------------
-
-    if any(
-        word in query
-        for word in [
-            "ストレッチ",
-            "動きやすい"
-        ]
-    ):
-
-        features = str(
-            product["features"]
-        )
-
-        if (
-            "ストレッチ" in features
-            or
-            "動きやすい" in features
-        ):
-
-            score += 0.15
+        count += 1
 
     # -----------------------------------------------------
-    # コンパクト
+    # 結果
     # -----------------------------------------------------
 
-    if any(
-        word in query
-        for word in [
-            "コンパクト",
-            "収納"
-        ]
-    ):
-
-        packability = str(
-            product["packability"]
-        )
-
-        if packability == "非常に高い":
-            score += 0.10
-
-        elif packability == "高い":
-            score += 0.08
-
-        elif packability == "中":
-            score += 0.04
+    if count == 0:
+        return 0.0
 
     return min(
-        score,
+        score / count,
         1.0
     )
 
 
 # =========================================================
-# 7. 商品推薦
+# 13. 商品推薦
 # =========================================================
 
 def recommend_products(
@@ -722,7 +740,10 @@ def recommend_products(
 
     result = df.copy()
 
+    # -----------------------------------------------------
     # 條件一致度
+    # -----------------------------------------------------
+
     result["similarity"] = result.apply(
         lambda product:
         calculate_match_score(
@@ -732,7 +753,10 @@ def recommend_products(
         axis=1
     )
 
+    # -----------------------------------------------------
     # 屬性分數
+    # -----------------------------------------------------
+
     result["attribute_score"] = result.apply(
         lambda product:
         calculate_attribute_score(
@@ -742,7 +766,10 @@ def recommend_products(
         axis=1
     )
 
-    # 商品類型分數
+    # -----------------------------------------------------
+    # 商品類型
+    # -----------------------------------------------------
+
     result["category_score"] = result.apply(
         lambda product:
         calculate_category_score(
@@ -759,51 +786,51 @@ def recommend_products(
     result["final_score"] = (
         result["similarity"] * 0.50
         +
-        result["attribute_score"] * 0.35
+        result["attribute_score"] * 0.30
         +
-        result["category_score"] * 0.15
+        result["category_score"] * 0.20
     )
 
+    # -----------------------------------------------------
     # 排序
+    # -----------------------------------------------------
+
     result = result.sort_values(
         by=[
             "final_score",
-            "similarity",
+            "category_score",
             "attribute_score",
-            "category_score"
+            "similarity"
         ],
         ascending=False
     )
 
-    return result.head(top_n)
+    return result.head(
+        top_n
+    )
 
 
 # =========================================================
-# 8. Streamlit UI
+# 14. Streamlit UI
 # =========================================================
-
-st.set_page_config(
-    page_title="AI Outdoor Recommendation",
-    page_icon="🏕️",
-    layout="wide"
-)
-
 
 st.title(
     "🏕️ AIを活用したアウトドア用品推薦システム"
 )
-
 
 st.write(
     "あなたの希望を入力すると、"
     "AIが条件に合ったアウトドア用品を推薦します。"
 )
 
-
 st.info(
     "例：冬の京都旅行で、軽くて暖かい服が欲しいです。"
 )
 
+
+# =========================================================
+# 15. 使用者輸入
+# =========================================================
 
 user_query = st.text_input(
     "欲しい商品の条件を入力してください",
@@ -815,7 +842,7 @@ user_query = st.text_input(
 
 
 # =========================================================
-# 9. 推薦結果
+# 16. 推薦按鈕
 # =========================================================
 
 if st.button(
@@ -840,6 +867,10 @@ if st.button(
             "🎯 おすすめ商品"
         )
 
+        # -------------------------------------------------
+        # 顯示前三名
+        # -------------------------------------------------
+
         for rank, (_, product) in enumerate(
             recommendations.iterrows(),
             start=1
@@ -851,6 +882,10 @@ if st.button(
             )
 
             col1, col2 = st.columns(2)
+
+            # ---------------------------------------------
+            # 左側
+            # ---------------------------------------------
 
             with col1:
 
@@ -884,6 +919,10 @@ if st.button(
                     f"{product['weight']}"
                 )
 
+            # ---------------------------------------------
+            # 右側
+            # ---------------------------------------------
+
             with col2:
 
                 st.write(
@@ -906,10 +945,18 @@ if st.button(
                     f"{product['packability']}"
                 )
 
+            # ---------------------------------------------
+            # 商品説明
+            # ---------------------------------------------
+
             st.write(
                 f"**商品説明：** "
                 f"{product['description']}"
             )
+
+            # ---------------------------------------------
+            # 評分
+            # ---------------------------------------------
 
             st.write(
                 f"条件一致度："
@@ -931,6 +978,10 @@ if st.button(
                 f"{product['final_score']:.3f}"
             )
 
+            # ---------------------------------------------
+            # 官方網站
+            # ---------------------------------------------
+
             official_url = str(
                 product.get(
                     "official_url",
@@ -940,7 +991,8 @@ if st.button(
 
             if (
                 official_url
-                and official_url.lower() != "nan"
+                and
+                official_url.lower() != "nan"
             ):
 
                 st.markdown(
