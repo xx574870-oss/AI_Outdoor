@@ -29,20 +29,39 @@ def calculate_text_score(user_query, product):
         str(product.get("description", ""))
     ]).lower()
 
-    keywords = re.findall(
-        r"[ぁ-んァ-ン一-龥a-zA-Z0-9]+",
-        query
-    )
+    # =========================
+    # 日文・中文常用關鍵詞
+    # =========================
 
-    score = 0.0
+    keywords = [
+        "夏", "冬", "春", "秋",
+        "暑い", "寒い",
+        "涼しい", "暖かい",
+        "防寒", "保温",
+        "軽い", "軽量",
+        "持ち運び",
+        "旅行", "観光",
+        "雨", "防水", "レイン",
+        "通気性", "蒸れない",
+        "アウトドア",
+        "登山", "キャンプ",
+        "ハイキング",
+        "ジャケット", "シャツ",
+        "パンツ", "バッグ",
+        "リュック", "シューズ",
+        "ウェア"
+    ]
+
+    matched_keywords = []
 
     for keyword in keywords:
 
-        if len(keyword) <= 1:
-            continue
+        if keyword in query and keyword in text:
 
-        if keyword in text:
-            score += 0.10
+            matched_keywords.append(keyword)
+
+    # 每個符合的關鍵詞增加分數
+    score = len(matched_keywords) * 0.10
 
     return min(score, 1.0)
 
