@@ -95,7 +95,7 @@ def calculate_attribute_score(user_query, product):
         if product["warmth"] == "高":
             score -= 0.10
 
-    # 軽さ
+    # 輕さ
     if any(
         keyword in query
         for keyword in [
@@ -166,16 +166,12 @@ def calculate_attribute_score(user_query, product):
 # 4. 推薦處理
 # =========================
 
-def recommend_products(
-    user_query,
-    top_n=3
-):
+def recommend_products(user_query, top_n=3):
 
     result = df.copy()
 
     result["similarity"] = result.apply(
-        lambda product:
-        calculate_text_score(
+        lambda product: calculate_text_score(
             user_query,
             product
         ),
@@ -183,8 +179,7 @@ def recommend_products(
     )
 
     result["attribute_score"] = result.apply(
-        lambda product:
-        calculate_attribute_score(
+        lambda product: calculate_attribute_score(
             user_query,
             product
         ),
@@ -276,11 +271,14 @@ if st.button(
                     f"**カテゴリー：** {product['category']}"
                 )
 
-                st.write(
-                    f"**価格：** ¥{product['price']:,}"
-                    if product["price"] != 0
-                    else "**価格：** 要公式確認"
-                )
+                if product["price"] != 0:
+                    st.write(
+                        f"**価格：** ¥{product['price']:,}"
+                    )
+                else:
+                    st.write(
+                        "**価格：** 要公式確認"
+                    )
 
                 st.write(
                     f"**特徴：** {product['features']}"
@@ -325,40 +323,10 @@ if st.button(
             )
 
             official_url = str(
-                product.get(
-                    "official_url",
-                    ""
-                )
+                product.get("official_url", "")
             ).strip()
 
-            if (
-                official_url
-                and official_url.lower() != "nan"
-            ):
-
-                st.markdown(
-                    "### 🛒 商品公式サイト"
-                )
-
-                st.link_button(
-                    "🛒 公式サイトで商品を見る",
-                    official_url,
-                    use_container_width=True
-                )
-
-            else:
-
-                st.info(
-                    "公式サイトの商品ページは現在登録されていません。"
-                )
-
-            st.divider()
-            ).strip()
-
-            if (
-                official_url
-                and official_url.lower() != "nan"
-            ):
+            if official_url and official_url.lower() != "nan":
 
                 st.markdown(
                     "### 🛒 商品公式サイト"
