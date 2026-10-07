@@ -15,56 +15,174 @@ df = pd.read_csv(
 # 2. 文字匹配評分
 # =========================
 
-def calculate_text_score(user_query, product):
+def calculate_attribute_score(user_query, product):
 
     query = user_query.lower()
 
-    text = " ".join([
-        str(product.get("product_name", "")),
-        str(product.get("category", "")),
-        str(product.get("material", "")),
-        str(product.get("season", "")),
-        str(product.get("use_case", "")),
-        str(product.get("features", "")),
-        str(product.get("description", ""))
-    ]).lower()
+    score = 0.0
 
     # =========================
-    # 日文・中文常用關鍵詞
+    # 季節
     # =========================
 
-    keywords = [
-        "夏", "冬", "春", "秋",
-        "暑い", "寒い",
-        "涼しい", "暖かい",
-        "防寒", "保温",
-        "軽い", "軽量",
-        "持ち運び",
-        "旅行", "観光",
-        "雨", "防水", "レイン",
-        "通気性", "蒸れない",
-        "アウトドア",
-        "登山", "キャンプ",
-        "ハイキング",
-        "ジャケット", "シャツ",
-        "パンツ", "バッグ",
-        "リュック", "シューズ",
-        "ウェア"
-    ]
+    if "冬" in query or "寒い" in query or "暖かい" in query or "防寒" in query:
 
-    matched_keywords = []
+        if "冬" in str(product["season"]):
+            score += 0.20
 
-    for keyword in keywords:
+        if product["warmth"] == "高":
+            score += 0.15
 
-        if keyword in query and keyword in text:
+        elif product["warmth"] == "中":
+            score += 0.08
 
-            matched_keywords.append(keyword)
+    if "夏" in query or "暑い" in query or "涼しい" in query:
 
-    # 每個符合的關鍵詞增加分數
-    score = len(matched_keywords) * 0.10
+        if "夏" in str(product["season"]):
+            score += 0.20
 
-    return min(score, 1.0)
+        if product["breathability"] == "非常に高い":
+            score += 0.15
 
+        elif product["breathability"] == "高":
+            score += 0.10
+
+    if "春" in query:
+
+        if "春" in str(product["season"]):
+            score += 0.20
+
+    if "秋" in query:
+
+        if "秋" in str(product["season"]):
+            score += 0.20
+
+    # =========================
+    # 輕量
+    # =========================
+
+    if any(
+        keyword in query
+        for keyword in [
+            "軽い",
+            "軽量",
+            "持ち運び"
+        ]
+    ):
+
+        try:
+            weight_text = str(product["weight"])
+            weight = float(
+                weight_text.replace("g", "").strip()
+            )
+
+            if weight <= 200:
+                score += 0.15
+
+            elif weight <= 300:
+                score += 0.12
+
+            elif weight <= 500:
+                score += 0.08
+
+            else:
+                score += 0.03
+
+        except:
+            pass
+
+    # =========================
+    # 防水
+    # =========================
+
+    if any(
+        keyword in query
+        for keyword in [
+            "防水",
+            "雨",
+            "レイン"
+        ]
+    ):
+
+        if product["waterproof"] == "非常に高い":
+            score += 0.20
+
+        elif product["waterproof"] == "高":
+            score += 0.15
+
+        elif product["waterproof"] == "中":
+            score += 0.08
+
+    # =========================
+    # 通氣性
+    # =========================
+
+    if any(
+        keyword in query
+        for keyword in [
+            "通気性",
+            "蒸れない",
+            "涼しい",
+            "暑い"
+        ]
+    ):
+
+        if product["breathability"] == "非常に高い":
+            score += 0.15
+
+        elif product["breathability"] == "高":
+            score += 0.10
+
+        elif product["breathability"] == "中":
+            score += 0.05
+
+    # =========================
+    # 收納性
+    # =========================
+
+    if any(
+        keyword in query
+        for keyword in [
+            "旅行",
+            "持ち運び",
+            "コンパクト"
+        ]
+    ):
+
+        if product["packability"] == "非常に高い":
+            score += 0.10
+
+        elif product["packability"] == "高い":
+            score += 0.08
+
+        elif product["packability"] == "中":
+            score += 0.04
+
+    # =========================
+    # 保溫性
+    # =========================
+
+    if any(
+        keyword in query
+        for keyword in [
+            "暖かい",
+            "暖かく",
+            "防寒",
+            "保温"
+        ]
+    ):
+
+        if product["warmth"] == "高":
+            score += 0.15
+
+        elif product["warmth"] == "中":
+            score += 0.08
+
+    # =========================
+    # 最低 0
+    # =========================
+
+    return max(0.0, score)
 
 # =========================
 # 3. 商品屬性評分
