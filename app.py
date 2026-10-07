@@ -283,7 +283,10 @@ def recommend_products(
 
     result = df.copy()
 
+    # =========================
     # 文字條件
+    # =========================
+
     result["similarity"] = result.apply(
         lambda product:
         calculate_text_score(
@@ -293,7 +296,10 @@ def recommend_products(
         axis=1
     )
 
+    # =========================
     # 商品屬性
+    # =========================
+
     result["attribute_score"] = result.apply(
         lambda product:
         calculate_attribute_score(
@@ -303,20 +309,73 @@ def recommend_products(
         axis=1
     )
 
-    # 最終分數
+    # =========================
+    # 基本最終分數
+    # =========================
+
     result["final_score"] = (
         result["similarity"] * 0.60
         + result["attribute_score"] * 0.40
     )
+
+    # =========================
+    # 重量差異作為細微排序
+    # 越輕的商品，分數稍微高一點
+    # =========================
+
+    def get_weight_score(weight):
+
+        try:
+
+            weight_text = str(weight)
+
+            weight_value = float(
+                re.sub(
+                    r"[^0-9.]",
+                    "",
+                    weight_text
+                )
+            )
+
+            if weight_value <= 200:
+                return 0.010
+
+            elif weight_value <= 300:
+                return 0.008
+
+            elif weight_value <= 500:
+                return 0.005
+
+            else:
+                return 0.002
+
+        except:
+
+            return 0.0
+
+    result["weight_bonus"] = result["weight"].apply(
+        get_weight_score
+    )
+
+    # =========================
+    # 加入重量微調分數
+    # =========================
+
+    result["final_score"] = (
+        result["final_score"]
+        + result["weight_bonus"]
+    )
+
+    # =========================
+    # 排序
+    # =========================
 
     result = result.sort_values(
         "final_score",
         ascending=False
     )
 
-    return result.head(
-        top_n
-    )
+    return result.head(top_n)
 
 
 # =========================
