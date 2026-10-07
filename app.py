@@ -444,23 +444,15 @@ if st.button(
 
             col1, col2 = st.columns(2)
 
-            with col1:
+                        with col1:
 
                 st.write(
                     f"**カテゴリー：** {product['category']}"
                 )
 
-                if product["price"] != 0:
-
-                    st.write(
-                        f"**価格：** ¥{product['price']:,}"
-                    )
-
-                else:
-
-                    st.write(
-                        "**価格：** 要公式確認"
-                    )
+                st.write(
+                    f"**価格：** ¥{int(float(product['price'])):,}"
+                )
 
                 st.write(
                     f"**特徴：** {product['features']}"
@@ -470,6 +462,23 @@ if st.button(
                     f"**重量：** {product['weight']}"
                 )
 
+            with col2:
+
+                st.write(
+                    f"**防水性：** {product['waterproof']}"
+                )
+
+                st.write(
+                    f"**保温性：** {product['warmth']}"
+                )
+
+                st.write(
+                    f"**通気性：** {product['breathability']}"
+                )
+
+                st.write(
+                    f"**収納性：** {product['packability']}"
+                )
             with col2:
 
                 st.write(
