@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import re
@@ -164,7 +163,7 @@ def calculate_attribute_score(user_query, product):
 
 
 # =========================
-# 4. 推薦処理
+# 4. 推薦處理
 # =========================
 
 def recommend_products(
@@ -314,7 +313,7 @@ if st.button(
             )
 
             st.write(
-                f"類似度スコア：{product['similarity']:.3f}"
+                f"条件一致度：{product['similarity']:.3f}"
             )
 
             st.write(
@@ -330,6 +329,30 @@ if st.button(
                     "official_url",
                     ""
                 )
+            ).strip()
+
+            if (
+                official_url
+                and official_url.lower() != "nan"
+            ):
+
+                st.markdown(
+                    "### 🛒 商品公式サイト"
+                )
+
+                st.link_button(
+                    "🛒 公式サイトで商品を見る",
+                    official_url,
+                    use_container_width=True
+                )
+
+            else:
+
+                st.info(
+                    "公式サイトの商品ページは現在登録されていません。"
+                )
+
+            st.divider()
             ).strip()
 
             if (
